@@ -18,40 +18,30 @@
     - name: Generate SSL keys if needed
       block:
 
-      - name: Read the openssl.cnf
-        set_fact:
-          openssl_cnf: "{{ lookup('file', '/etc/ssl/openssl.cnf' ) }}"
+      - name: generate private key
+        openssl_privatekey:
+          path: "{{ playbook_dir}}/certs/whatcheese.key.pem"
+          size: 2048
+          type: RSA
+        register: privatekey
 
-      - name: "Gen OpenSSL Config with SAN (MacOS libressl doesn't have -addext yet)"
-        copy:
-          dest: certs/.openssl.cnf
-          content: |
-            {{openssl_cnf}}
-            [ SAN ]
-            subjectAltName = "DNS:api.whatcheese.nginx.demo"
+      - name: create and csrs
+        openssl_csr:
+          path: "{{ playbook_dir }}/certs/whatcheese.csr.pem"
+          privatekey_path: "{{ privatekey.filename }}"
+          organization_name: "NGINX Inc"
+          common_name: "api.whatcheese.nginx.demo"
+          country_name: "GB"
+        register: csr
 
-      - name: Create the TLS Key
-        shell:
-          argv:
-            - "openssl"
-            - "req"
-            - "-new"
-            - "-nodes"
-            - "-keyout"
-            - "certs/whatcheese.key.pem"
-            - "-subj"
-            - "/C=GB/ST=London/L=London/O=NGINX Inc/CN=api.whatcheese.nginx.demo"
-            - "-extensions"
-            - "SAN"
-            - "-config"
-            - "certs/.openssl.cnf"
-            - "-x509"
-            - "-days"
-            - "365"
-            - "-out"
-            - "certs/whatcheese.crt.pem"
-          creates: certs/whatcheese.crt.pem
-        register: csr_result
+      - name: generate certificate
+        openssl_certificate:
+          path: "{{ playbook_dir}}/certs/whatcheese.crt.pem"
+          privatekey_path: "{{ privatekey.filename }}"
+          csr_path: "{{ csr.filename }}"
+          provider: selfsigned
+          subject_alt_name:
+            - "DNS:api.whatcheese.nginx.demo"
 
       when: certfile.stat.exists == False
 
