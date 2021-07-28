@@ -1,15 +1,31 @@
 ---
+# Controller hostname
 nginx_controller_fqdn: ctrl1.nginx.demo
+
+# Controller credentials
 nginx_controller_user_email: admin@nginx.com
 nginx_controller_user_password: "{{ lookup('password', '~/.controller.passwd length=12') }}"
 nginx_controller_validate_certs: false
 
+# The OAS3 spec of the API
 whatcheese_oas: whatcheese_oas3.yaml
+
+# The environment you are deploying into, it must exist and your user should have write permission
 whatcheese_env: aks-prod
+
+# The location which the NGINX Plus instance is deployed. The default is undefined
 whatcheese_loc: azure-uk
+
+# Name of the Application to create
 whatcheese_app: cheese-demo.whatcheese
+
+# Name of the Certificate to create
 whatcheese_crt: whatcheese_api
+
+# Name of the API to create
 whatcheese_api: cheese_api
+
+# Component names for read/write and links section of the API.
 whatcheese_read: whatcheese_read
 whatcheese_write: whatcheese_write
 whatcheese_links: whatcheese_links
