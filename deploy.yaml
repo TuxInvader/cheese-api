@@ -10,14 +10,59 @@
 
   tasks:
 
-    - name: Login to the controller
-      include_role:
-        name: nginxinc.nginx_controller.nginx_controller_generate_token
+    - name: Check SSL Key
+      stat:
+        path: certs/whatcheese.crt.pem
+      register: certfile
+
+    - name: Generate SSL keys if needed
+      block:
+
+      - name: Read the openssl.cnf
+        set_fact:
+          openssl_cnf: "{{ lookup('file', '/etc/ssl/openssl.cnf' ) }}"
+
+      - name: "Gen OpenSSL Config with SAN (MacOS libressl doesn't have -addext yet)"
+        copy:
+          dest: certs/.openssl.cnf
+          content: |
+            {{openssl_cnf}}
+            [ SAN ]
+            subjectAltName = "DNS:api.whatcheese.nginx.demo"
+
+      - name: Create the TLS Key
+        shell:
+          argv:
+            - "openssl"
+            - "req"
+            - "-new"
+            - "-nodes"
+            - "-keyout"
+            - "certs/whatcheese.key.pem"
+            - "-subj"
+            - "/C=GB/ST=London/L=London/O=NGINX Inc/CN=api.whatcheese.nginx.demo"
+            - "-extensions"
+            - "SAN"
+            - "-config"
+            - "certs/.openssl.cnf"
+            - "-x509"
+            - "-days"
+            - "365"
+            - "-out"
+            - "certs/whatcheese.crt.pem"
+          creates: certs/whatcheese.crt.pem
+        register: csr_result
+
+      when: certfile.stat.exists == False
 
     - name: "Load Certificate"
       set_fact:
-        cheese_cert: "{{ lookup('file', 'certs/whatcheese.crt.pem' }}"
-        cheese_key: "{{ lookup('file', 'certs/whatcheese.key.pem' }}"
+        cheese_cert: "{{ lookup('file', 'certs/whatcheese.crt.pem') }}"
+        cheese_key: "{{ lookup('file', 'certs/whatcheese.key.pem') }}"
+
+    - name: Login to the controller
+      include_role:
+        name: nginxinc.nginx_controller.nginx_controller_generate_token
 
     - name: Create the certificate object
       include_role:
