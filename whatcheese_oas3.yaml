@@ -227,8 +227,8 @@ components:
           type: string
           example: 'cheese'
         items:
-          type: string
-          format: integer
+          type: integer
+          format: int32
           example: 1
         results:
           type: object
@@ -250,8 +250,8 @@ components:
         - description
       properties:
         id:
-          type: string
-          format: integer
+          type: integer
+          format: int32
           example: 99
         name:
           type: string
