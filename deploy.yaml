@@ -1,0 +1,81 @@
+---
+- hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  vars_files:
+    - "vars.yaml"
+  
+  collections: nginxinc.nginx_controller
+
+  tasks:
+
+    - name: Login to the controller
+      include_role:
+        name: nginxinc.nginx_controller.nginx_controller_generate_token
+
+    - name: "Load Certificate"
+      set_fact:
+        cheese_cert: "{{ lookup('file', 'certs/whatcheese.crt.pem' }}"
+        cheese_key: "{{ lookup('file', 'certs/whatcheese.key.pem' }}"
+
+    - name: Create the certificate object
+      include_role:
+        name: nginxinc.nginx_controller.nginx_controller_certificate
+      vars:
+        nginx_controller_environmentName: "{{ whatcheese_env }}"
+        nginx_controller_certificate:
+          metadata:
+            name: "{{ whatcheese_crt }}"
+            displayName: "whatcheese API"
+          desiredState:
+            type: PEM
+            publicCert: "{{ cheese_cert | default('') }}"
+            privateKey: "{{ cheese_key | default('') }}"
+            
+    - name: Create the Gateway object
+      include_role:
+        name: nginxinc.nginx_controller.nginx_controller_gateway
+      vars:
+        nginx_controller_environmentName: "{{ whatcheese_env }}"
+        nginx_controller_gateway:
+          metadata:
+            name: cheese-api
+            displayName: "Cheese API"
+          desiredState:
+            ingress:
+              uris:
+                "https://api.whatcheese.nginx.demo": {}
+                "http://api.whatcheese.nginx.demo": {}
+              tls:
+                certRef:
+                  ref: "/services/environments/{{ whatcheese_env }}/certs/{{ whatcheese_crt }}"
+                protocols:
+                  - "TLSv1.3"
+                  - "TLSv1.2"
+              placement:
+                instanceRefs:
+                  - ref: "/infrastructure/locations/{{ whatcheese_loc }}/instances/mbngx1"
+
+
+    - name: Configure the application
+      include_role:
+        name: nginxinc.nginx_controller.nginx_controller_application
+      vars:
+        nginx_controller_environmentName: "{{ whatcheese_env }}"
+        nginx_controller_app:
+          metadata:
+            name: "{{ whatcheese_app }}"
+            displayName: "WhatCheese Apps"
+
+    - name: "Load OAS File"
+      set_fact:
+        oas: "{{ lookup('file', whatcheese_oas ) | from_yaml }}"
+
+    - name: Import the API definition
+      include_role:
+        name: nginxinc.nginx_controller.nginx_controller_api_definition_import
+      vars:
+        nginx_controller_api_definition_version: "v1"
+        nginx_controller_api_definition_name: "{{ whatcheese_api }}"
+        nginx_controller_api_definition: "{{ oas }}"

@@ -1,0 +1,17 @@
+---
+nginx_controller_fqdn: ctrl1.nginx.demo
+nginx_controller_user_email: admin@nginx.com
+nginx_controller_user_password: "{{ lookup('password', '~/.controller.passwd length=12') }}"
+nginx_controller_validate_certs: false
+
+whatcheese_oas: whatcheese_oas3.yaml
+whatcheese_env: aks-prod
+whatcheese_loc: azure-uk
+whatcheese_app: cheese-demo.whatcheese
+whatcheese_crt: whatcheese_api
+whatcheese_api: cheese_api
+whatcheese_read: whatcheese_read
+whatcheese_write: whatcheese_write
+whatcheese_links: whatcheese_links
+
+...
